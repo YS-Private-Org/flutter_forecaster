@@ -1,7 +1,7 @@
 use augurs::{
     ets::AutoETS,
     forecaster::{
-        transforms::{LinearInterpolator, Logit, MinMaxScaler},
+        transforms::{LinearInterpolator, Log, BoxCox},
         Forecaster, Transformer,
     },
     mstl::MSTLModel,
@@ -24,8 +24,8 @@ pub fn augurs_forecaster(csv_data: Vec<u8>, frequency: String) -> std::string::S
     // Set up the transformers.
     let transformers = vec![
         LinearInterpolator::new().boxed(),
-        MinMaxScaler::new().boxed(),
-        Logit::new().boxed(),
+        BoxCox::new().boxed(),
+        Log::new().boxed(),
     ];
 
     // Create a forecaster using the transforms.
