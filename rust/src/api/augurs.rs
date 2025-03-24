@@ -1,7 +1,7 @@
 use augurs::{
     ets::AutoETS,
     forecaster::{
-        transforms::{LinearInterpolator, Logit, MinMaxScaler},
+        transforms::{BoxCox, LinearInterpolator, Log},
         Forecaster, Transformer,
     },
     mstl::MSTLModel,
@@ -16,29 +16,29 @@ pub fn augurs_forecaster(csv_data: Vec<u8>, frequency: String) -> std::string::S
     let sales = read_sales_data(csv_data);
     let n_frequency = get_frequency(frequency);
 
-    let data = sales.as_slice();
-
-    let ets = AutoETS::non_seasonal().into_trend_model();
+    let ets = AutoETS::new(12, "ZZN").unwrap().into_trend_model();
     let mstl = MSTLModel::new(vec![n_frequency], ets);
 
     // Set up the transformers.
     let transformers = vec![
         LinearInterpolator::new().boxed(),
-        MinMaxScaler::new().boxed(),
-        Logit::new().boxed(),
+        BoxCox::new().boxed(),
+        Log::new().boxed(),
     ];
 
     // Create a forecaster using the transforms.
     let mut forecaster = Forecaster::new(mstl).with_transformers(transformers);
 
     // Fit the data into the forecaster through the MSTL model
-    forecaster.fit(&data).expect("model should fit");
+    forecaster
+        .fit(&sales)
+        .expect("Error Fitting Data into Transformer");
 
     // Generate a limited number of predictions (X amount) to focus on short-term accuracy.
     // Short-term predictions are preferred to prevent large deviations
     let in_sample = forecaster
         .predict(3, 0.95)
-        .expect("in-sample predictions should work");
+        .expect("Predictions failed to generate");
 
     let intervals = in_sample.intervals.map(|forecast| {
         (
